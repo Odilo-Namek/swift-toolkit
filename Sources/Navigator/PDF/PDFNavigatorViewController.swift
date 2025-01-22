@@ -62,6 +62,7 @@ open class PDFNavigatorViewController: UIViewController, VisualNavigator, Select
 
     public let publication: Publication
     private let initialLocation: Locator?
+    private let password: String?
     private let config: Configuration
     private let editingActions: EditingActionsController
     /// Reading order index of the current resource.
@@ -81,6 +82,7 @@ open class PDFNavigatorViewController: UIViewController, VisualNavigator, Select
         publication: Publication,
         initialLocation: Locator?,
         config: Configuration = .init(),
+        password: String?,
         delegate: PDFNavigatorViewController? = nil,
         httpServer: HTTPServer
     ) throws {
@@ -98,6 +100,7 @@ open class PDFNavigatorViewController: UIViewController, VisualNavigator, Select
 
         self.publication = publication
         self.initialLocation = initialLocation
+        self.password = password
         server = httpServer
         self.publicationEndpoint = publicationEndpoint
         self.config = config
@@ -138,6 +141,7 @@ open class PDFNavigatorViewController: UIViewController, VisualNavigator, Select
     public init(
         publication: Publication,
         initialLocation: Locator? = nil,
+        password: String? = nil,
         editingActions: [EditingAction] = EditingAction.defaultActions
     ) {
         precondition(!publication.isRestricted, "The provided publication is restricted. Check that any DRM was properly unlocked using a Content Protection.")
@@ -147,6 +151,7 @@ open class PDFNavigatorViewController: UIViewController, VisualNavigator, Select
 
         self.publication = publication
         self.initialLocation = initialLocation
+        self.password = password
         server = nil
         publicationEndpoint = nil
         publicationBaseURL = URL(string: baseURL.absoluteString.addingSuffix("/"))!
@@ -182,6 +187,7 @@ open class PDFNavigatorViewController: UIViewController, VisualNavigator, Select
     private init(
         publication: Publication,
         initialLocation: Locator?,
+        password: String? = nil,
         httpServer: HTTPServer?,
         publicationEndpoint: HTTPServerEndpoint?,
         publicationBaseURL: URL,
@@ -189,6 +195,7 @@ open class PDFNavigatorViewController: UIViewController, VisualNavigator, Select
     ) {
         self.publication = publication
         self.initialLocation = initialLocation
+        self.password = password
         server = httpServer
         self.publicationEndpoint = publicationEndpoint
         self.publicationBaseURL = URL(string: publicationBaseURL.absoluteString.addingSuffix("/"))!
@@ -441,6 +448,10 @@ open class PDFNavigatorViewController: UIViewController, VisualNavigator, Select
             else {
                 log(.error, "Can't open PDF document at \(link)")
                 return false
+            }
+            
+            if let password, document.isLocked {
+                document.unlock(withPassword: password)
             }
 
             currentResourceIndex = index
