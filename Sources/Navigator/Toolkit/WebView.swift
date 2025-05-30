@@ -19,6 +19,12 @@ final class WebView: WKWebView {
         config.mediaTypesRequiringUserActionForPlayback = .all
         super.init(frame: .zero, configuration: config)
 
+        #if compiler(>=6.0)
+            if #available(iOS 18.0, *) {
+                config.writingToolsBehavior = .none
+            }
+        #endif
+        
         #if DEBUG && swift(>=5.8)
             if #available(macOS 13.3, iOS 16.4, *) {
                 isInspectable = true
@@ -36,6 +42,16 @@ final class WebView: WKWebView {
         // Before iOS 12, we also need to disable user interaction to get rid of the selection overlays.
         isUserInteractionEnabled = false
         isUserInteractionEnabled = true
+    }
+    
+    @available(iOS 13.0, *)
+    override func buildMenu(with builder: any UIMenuBuilder) {
+        editingActions.buildMenu(with: builder)
+
+        // Don't call super as it is the only way to remove the
+        // "Copy Link with Highlight" menu item.
+        // See https://github.com/readium/swift-toolkit/issues/509
+//        super.buildMenu(with: builder)
     }
 
     override func canPerformAction(_ action: Selector, withSender sender: Any?) -> Bool {
