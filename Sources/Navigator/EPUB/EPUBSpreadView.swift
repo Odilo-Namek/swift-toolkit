@@ -279,6 +279,20 @@ class EPUBSpreadView: UIView, Loggable, PageView {
     }
 
     // MARK: - Location and progression.
+    
+    public func correctSpreadViewContentOffset() {
+        let pageWidth = scrollView.bounds.width
+        
+        guard pageWidth > 0 else {
+            return
+        }
+        
+        let rawPage = scrollView.contentOffset.x / pageWidth
+        let flooredPage = floor(rawPage)
+        let targetOffsetX = flooredPage * pageWidth
+        
+        scrollView.contentOffset.x = targetOffsetX
+    }
 
     /// Current progression in the resource with given href.
     func progression(in href: String) -> Double {

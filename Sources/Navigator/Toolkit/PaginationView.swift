@@ -142,6 +142,10 @@ final class PaginationView: UIView, Loggable {
         }
 
         scrollView.contentOffset.x = xOffsetForIndex(currentIndex)
+        
+        if let spreadView = currentView as? EPUBSpreadView {
+            spreadView.correctSpreadViewContentOffset()
+        }
     }
 
     /// Returns the x offset to the page view with given index in the scroll view.
