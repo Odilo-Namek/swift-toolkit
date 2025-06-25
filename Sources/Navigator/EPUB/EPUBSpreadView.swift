@@ -287,9 +287,8 @@ class EPUBSpreadView: UIView, Loggable, PageView {
             return
         }
         
-        let rawPage = scrollView.contentOffset.x / pageWidth
-        let flooredPage = floor(rawPage)
-        let targetOffsetX = flooredPage * pageWidth
+        let page = (scrollView.contentOffset.x / pageWidth).rounded()
+        let targetOffsetX = page * pageWidth
         
         scrollView.contentOffset.x = targetOffsetX
     }
