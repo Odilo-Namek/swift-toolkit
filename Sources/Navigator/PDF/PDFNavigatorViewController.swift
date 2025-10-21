@@ -217,6 +217,16 @@ open class PDFNavigatorViewController: UIViewController, VisualNavigator, Select
     public required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
+    
+    open override func removeFromParent() {
+        super.removeFromParent()
+        
+        NotificationCenter.default.removeObserver(self)
+        
+        if let endpoint = publicationEndpoint {
+            server?.remove(at: endpoint)
+        }
+    }
 
     deinit {
         NotificationCenter.default.removeObserver(self)
@@ -256,7 +266,9 @@ open class PDFNavigatorViewController: UIViewController, VisualNavigator, Select
         if let pdfView = pdfView, scalesDocumentToFit {
             // Makes sure that the PDF is always properly scaled down when rotating the screen, if the user didn't zoom in.
             let isAtMinScaleFactor = (pdfView.scaleFactor == pdfView.minScaleFactor)
-            coordinator.animate(alongsideTransition: { _ in
+            coordinator.animate(alongsideTransition: { [weak self] _ in
+                guard let self else { return }
+                
                 self.updateScaleFactors()
                 if isAtMinScaleFactor {
                     pdfView.scaleFactor = pdfView.minScaleFactor
