@@ -8,7 +8,7 @@ import Foundation
 import PDFKit
 
 public final class PDFDocumentView: PDFView {
-    var editingActions: EditingActionsController
+    weak var editingActions: EditingActionsController?
 
     init(frame: CGRect, editingActions: EditingActionsController) {
         self.editingActions = editingActions
@@ -29,6 +29,19 @@ public final class PDFDocumentView: PDFView {
         fatalError("init(coder:) has not been implemented")
     }
 
+    deinit {
+        clearSelection()
+
+        if let scrollView = firstScrollView {
+            scrollView.delegate = nil
+        }
+
+        subviews.forEach { $0.removeFromSuperview() }
+
+        document = nil
+        delegate = nil
+    }
+
     override public func safeAreaInsetsDidChange() {
         super.safeAreaInsetsDidChange()
         updateContentInset()
@@ -46,16 +59,17 @@ public final class PDFDocumentView: PDFView {
     }
 
     override public func canPerformAction(_ action: Selector, withSender sender: Any?) -> Bool {
-        super.canPerformAction(action, withSender: sender) && editingActions.canPerformAction(action)
+        guard let editingActions = editingActions else { return false }
+        return super.canPerformAction(action, withSender: sender) && editingActions.canPerformAction(action)
     }
 
     override public func copy(_ sender: Any?) {
-        editingActions.copy()
+        editingActions?.copy()
     }
 
     @available(iOS 13.0, *)
     override public func buildMenu(with builder: UIMenuBuilder) {
-        editingActions.buildMenu(with: builder)
+        editingActions?.buildMenu(with: builder)
         super.buildMenu(with: builder)
     }
 }

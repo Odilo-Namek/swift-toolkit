@@ -11,7 +11,7 @@ import UIKit
 /// Since iOS 13, the way to add a properly functioning tap gesture recognizer on a `PDFView`
 /// significantly changed. This class handles the setup depending on the current iOS version.
 final class PDFTapGestureController: NSObject {
-    private let pdfView: PDFView
+    private weak var pdfView: PDFView?
     private let tapAction: TargetAction
     private var tapRecognizer: UITapGestureRecognizer!
 
@@ -39,9 +39,25 @@ final class PDFTapGestureController: NSObject {
         }
     }
 
+    deinit {
+        if let tapRecognizer = tapRecognizer {
+            tapRecognizer.delegate = nil
+            tapRecognizer.removeTarget(self, action: nil)
+
+            if let pdfView = pdfView {
+                if #available(iOS 13.0, *) {
+                    pdfView.removeGestureRecognizer(tapRecognizer)
+                } else {
+                    pdfView.superview?.removeGestureRecognizer(tapRecognizer)
+                }
+            }
+        }
+    }
+
     @objc private func didTap(_ gesture: UITapGestureRecognizer) {
         // On iOS 13, the tap to clear text selection is broken by adding the tap recognizer, so
         // we clear it manually.
+        guard let pdfView = pdfView else { return }
         guard pdfView.currentSelection == nil else {
             pdfView.clearSelection()
             return

@@ -218,8 +218,18 @@ open class PDFNavigatorViewController: UIViewController, VisualNavigator, Select
         fatalError("init(coder:) has not been implemented")
     }
     
+    open override func willMove(toParent parent: UIViewController?) {
+        super.willMove(toParent: parent)
+
+        if parent == nil {
+            cleanupPDFView()
+        }
+    }
+
     open override func removeFromParent() {
         super.removeFromParent()
+        
+        cleanupPDFView()
         
         NotificationCenter.default.removeObserver(self)
         
@@ -228,7 +238,32 @@ open class PDFNavigatorViewController: UIViewController, VisualNavigator, Select
         }
     }
 
+    private func cleanupPDFView() {
+        guard let pdfView = pdfView else { return }
+
+        NotificationCenter.default.removeObserver(self, name: .PDFViewPageChanged, object: pdfView)
+        NotificationCenter.default.removeObserver(self, name: .PDFViewSelectionChanged, object: pdfView)
+
+        pdfView.clearSelection()
+        editingActions.selection = nil
+
+        tapGestureController = nil
+
+        pdfView.firstScrollView?.delegate = nil
+
+        pdfView.gestureRecognizers?.forEach { pdfView.removeGestureRecognizer($0) }
+        
+        pdfView.delegate = nil
+        pdfView.document = nil
+
+        pdfView.removeFromSuperview()
+        
+        self.pdfView = nil
+    }
+
     deinit {
+        cleanupPDFView()
+        
         NotificationCenter.default.removeObserver(self)
 
         if let endpoint = publicationEndpoint {
@@ -324,8 +359,26 @@ open class PDFNavigatorViewController: UIViewController, VisualNavigator, Select
 
     private func resetPDFView(at locator: Locator?) {
         if let pdfView = pdfView {
+            // Remove specific observers for this pdfView instance
+            NotificationCenter.default.removeObserver(self, name: .PDFViewPageChanged, object: pdfView)
+            NotificationCenter.default.removeObserver(self, name: .PDFViewSelectionChanged, object: pdfView)
+
+            // Clear selection to break retain cycles between EditingActionsController and PDFView
+            pdfView.clearSelection()
+            editingActions.selection = nil
+
+            // Clean up PDFView references - order matters!
+            pdfView.delegate = nil
+
+            // Clean up gesture controller to break retain cycles
+            // This must be done BEFORE clearing document to ensure gesture is removed properly
+            tapGestureController = nil
+
+            // Clear the document to release its internal resources
+            pdfView.document = nil
+
+            // Remove from view hierarchy
             pdfView.removeFromSuperview()
-            NotificationCenter.default.removeObserver(self)
         }
 
         currentResourceIndex = nil
