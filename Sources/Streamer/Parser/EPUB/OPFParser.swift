@@ -52,11 +52,37 @@ final class OPFParser: Loggable {
     init(basePath: String, data: Data, fallbackTitle: String, displayOptionsData: Data? = nil, encryptions: [String: Encryption]) throws {
         self.basePath = basePath
         self.fallbackTitle = fallbackTitle
-        document = try Fuzi.XMLDocument(data: data)
+        document = try Fuzi.XMLDocument(data: Self.ensureOPFNamespace(in: data))
         document.definePrefix("opf", forNamespace: "http://www.idpf.org/2007/opf")
         displayOptions = (displayOptionsData.map { try? Fuzi.XMLDocument(data: $0) }) ?? nil
         metas = OPFMetaList(document: document)
         self.encryptions = encryptions
+    }
+
+    /// Some malformed EPUBs ship a `<package>` root element that either
+    /// omits the OPF namespace entirely or only declares it as a prefix
+    /// (`xmlns:opf="..."`), leaving the package and its children in the
+    /// null namespace. Either way, the namespaced XPath queries below
+    /// (`/opf:package/...`) return nothing and the publication fails to
+    /// parse. Inject `xmlns="http://www.idpf.org/2007/opf"` as the
+    /// default namespace whenever it is not already declared.
+    private static func ensureOPFNamespace(in data: Data) -> Data {
+        let opfNamespace = "http://www.idpf.org/2007/opf"
+        guard var xml = String(data: data, encoding: .utf8),
+              let openRange = xml.range(of: "<package", options: .caseInsensitive),
+              let closeRange = xml.range(of: ">", range: openRange.upperBound ..< xml.endIndex)
+        else {
+            return data
+        }
+        let attributes = xml[openRange.upperBound ..< closeRange.lowerBound]
+        let alreadyHasDefault =
+            attributes.contains("xmlns=\"\(opfNamespace)\"") ||
+            attributes.contains("xmlns='\(opfNamespace)'")
+        guard !alreadyHasDefault else {
+            return data
+        }
+        xml.insert(contentsOf: " xmlns=\"\(opfNamespace)\"", at: openRange.upperBound)
+        return xml.data(using: .utf8) ?? data
     }
 
     convenience init(fetcher: Fetcher, opfHREF: String, fallbackTitle: String, encryptions: [String: Encryption] = [:]) throws {
