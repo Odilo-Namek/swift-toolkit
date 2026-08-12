@@ -99,6 +99,16 @@ final class PaginationView: UIView, Loggable {
 
     private let scrollView = UIScrollView()
 
+    private var lockedContentOffset: CGPoint?
+
+    var isUserScrollingEnabled: Bool {
+        get { scrollView.isScrollEnabled }
+        set {
+            scrollView.isScrollEnabled = newValue
+            lockedContentOffset = newValue ? nil : scrollView.contentOffset
+        }
+    }
+
     init(frame: CGRect, preloadPreviousPositionCount: Int, preloadNextPositionCount: Int) {
         self.preloadPreviousPositionCount = preloadPreviousPositionCount
         self.preloadNextPositionCount = preloadNextPositionCount
@@ -358,6 +368,12 @@ extension PaginationView: UIScrollViewDelegate {
 
     func scrollViewWillEndDragging(_ scrollView: UIScrollView, withVelocity velocity: CGPoint, targetContentOffset: UnsafeMutablePointer<CGPoint>) {
         scrollView.isScrollEnabled = false
+    }
+
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        if let lockedContentOffset, scrollView.contentOffset != lockedContentOffset {
+            scrollView.contentOffset = lockedContentOffset
+        }
     }
 
     func scrollViewDidEndScrollingAnimation(_ scrollView: UIScrollView) {

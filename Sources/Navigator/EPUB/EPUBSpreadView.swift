@@ -53,6 +53,16 @@ class EPUBSpreadView: UIView, Loggable, PageView {
 
     private var lastClick: ClickEvent? = nil
 
+    private var isSelecting = false {
+        didSet {
+            guard isSelecting != oldValue else { return }
+            scrollView.isScrollEnabled = !isSelecting
+            lockedContentOffset = isSelecting ? scrollView.contentOffset : nil
+        }
+    }
+
+    private var lockedContentOffset: CGPoint?
+
     /// If YES, the content will be faded in once loaded.
     let animatedLoad: Bool
 
@@ -250,6 +260,7 @@ class EPUBSpreadView: UIView, Loggable, PageView {
     /// Called by the JavaScript layer when the user selection changed.
     private func selectionDidChange(_ body: Any) {
         if body is NSNull {
+            isSelecting = false
             focusedResource = nil
             delegate?.spreadView(self, selectionDidChange: nil, frame: .zero)
             return
@@ -261,12 +272,14 @@ class EPUBSpreadView: UIView, Loggable, PageView {
             let text = try? Locator.Text(json: selection["text"]),
             var frame = CGRect(json: selection["rect"])
         else {
+            isSelecting = false
             focusedResource = nil
             delegate?.spreadView(self, selectionDidChange: nil, frame: .zero)
             log(.warning, "Invalid body for selectionDidChange: \(body)")
             return
         }
 
+        isSelecting = true
         focusedResource = spread.links.first(withHREF: href)
         frame.origin = convertPointToNavigatorSpace(frame.origin)
         delegate?.spreadView(self, selectionDidChange: text, frame: frame)
@@ -504,7 +517,9 @@ extension EPUBSpreadView: UIScrollViewDelegate {
     }
 
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        // Do not remove, overridden in subclasses.
+        if let lockedContentOffset, scrollView.contentOffset != lockedContentOffset {
+            scrollView.contentOffset = lockedContentOffset
+        }
     }
 }
 

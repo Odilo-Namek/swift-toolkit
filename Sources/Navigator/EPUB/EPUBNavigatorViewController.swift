@@ -1124,6 +1124,8 @@ extension EPUBNavigatorViewController: EPUBSpreadViewDelegate {
     }
 
     func spreadView(_ spreadView: EPUBSpreadView, selectionDidChange text: Locator.Text?, frame: CGRect) {
+        paginationView.isUserScrollingEnabled = (text == nil)
+
         guard
             let locator = currentLocation,
             let text = text
